@@ -43,7 +43,7 @@ async function signViaDaemon(tx: Record<string, unknown>): Promise<string> {
       try {
         const response = JSON.parse(data);
         if (response.ok) {
-          resolve(response.signedTransaction);
+          resolve(response.serializedTransaction);
         } else {
           reject(new Error(response.error));
         }

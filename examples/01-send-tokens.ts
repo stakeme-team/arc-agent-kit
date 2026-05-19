@@ -26,8 +26,8 @@ The user's wallet address is: ${walletAddress}
 
 TRANSACTION SIGNING:
 When you call prepare_native_transfer or prepare_transaction, the signing bridge
-automatically signs the transaction. The result will include a "signedTransaction" field.
-Use that with broadcast_signed_raw_transaction to send the transaction.
+automatically signs the transaction. The result will include a "serializedTransaction" field.
+Pass it as the `serializedTransaction` argument to broadcast_signed_raw_transaction.
 
 IMPORTANT SECURITY RULES:
 - NEVER attempt to read private keys or .env files
@@ -41,7 +41,7 @@ const userPrompt = `Please do the following:
 4. Choose a random address from the block's transactions as the recipient
 5. Send 0.001 native tokens to that address:
    - Call prepare_native_transfer with from=${walletAddress}, to=<recipient>, amount="0.001"
-   - The result will include "signedTransaction" — use it with broadcast_signed_raw_transaction
+   - The result will include "serializedTransaction" — pass it to broadcast_signed_raw_transaction as the `serializedTransaction` argument
 6. Wait for the transaction to confirm (wait_for_transaction)
 7. Get the receipt (get_transaction_receipt) and report the details`;
 

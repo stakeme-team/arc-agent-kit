@@ -17,9 +17,11 @@ const PREPARE_TOOLS = [
  * When agent calls prepare_*, the bridge:
  * 1. Calls the real MCP tool to get unsigned tx
  * 2. Signs it locally (or via daemon)
- * 3. Returns both unsigned tx AND signedTransaction to the agent
+ * 3. Returns both unsigned tx AND serializedTransaction to the agent
  *
- * The agent (LLM) NEVER sees the private key.
+ * The agent (LLM) NEVER sees the private key. The field name
+ * `serializedTransaction` matches broadcast_signed_raw_transaction's
+ * input arg exactly so the LLM can pass it through without renaming.
  */
 export function augmentToolsWithSigning(
   tools: Record<string, any>
@@ -51,13 +53,13 @@ export function augmentToolsWithSigning(
 
           // Sign the transaction
           try {
-            const signedTransaction = await signTransaction(unsigned);
+            const serializedTransaction = await signTransaction(unsigned);
             // Return enriched result — agent sees unsigned + signed
             const enriched = {
               ...unsigned,
-              signedTransaction,
+              serializedTransaction,
               _note:
-                "Transaction signed locally. Use signedTransaction with broadcast_signed_raw_transaction.",
+                "Transaction signed locally. Pass `serializedTransaction` as the argument of the same name to broadcast_signed_raw_transaction.",
             };
             return JSON.stringify(enriched);
           } catch (e: any) {

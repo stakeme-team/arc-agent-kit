@@ -48,10 +48,22 @@ echo '<unsigned_tx_json>' | npx tsx scripts/sign-tx.ts
 This reads the private key internally and returns ONLY the signed hex.
 
 ### Step 3: Broadcast via MCP
-Call `broadcast_signed_raw_transaction` with the signed hex from step 2.
+Call `broadcast_signed_raw_transaction` with **`serializedTransaction`** = signed hex (the argument name must be exactly `serializedTransaction`, NOT `signedTransaction`).
 
 ### Step 4: Wait for confirmation
 Call `wait_for_transaction` with the tx hash.
+
+## Field name reference — `prepare_*` tools
+
+Different prepare tools use different field names for the amount/value. Picking the wrong one returns a validation error. Use exactly:
+
+| Tool | Value field | Format | Example |
+|---|---|---|---|
+| `prepare_native_transfer` | `amount` | decimal ether (parseEther) | `"0.001"` |
+| `prepare_erc20_transfer` | `amount` | human decimal using token decimals | `"1.5"` |
+| `prepare_transaction` | `valueWei` | decimal wei string | `"1000000000000000"` |
+
+For `broadcast_signed_raw_transaction` the input argument is **`serializedTransaction`** (full signed `0x…` hex). The signing-bridge in `src/signing-bridge.ts` already returns that field with the same name — pass it through verbatim.
 
 ## Contract Deployment Flow
 

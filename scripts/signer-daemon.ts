@@ -226,7 +226,7 @@ async function handleRequest(
 
       console.log(`     \u2713 Signed\n`);
 
-      return { ok: true, signedTransaction: signed };
+      return { ok: true, serializedTransaction: signed };
     }
 
     case "get_address": {

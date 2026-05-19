@@ -31,7 +31,8 @@ The user's wallet address is: ${walletAddress}
 
 TRANSACTION SIGNING:
 When you call prepare_transaction, the signing bridge automatically signs it.
-The result includes a "signedTransaction" field — use it with broadcast_signed_raw_transaction.
+The result includes a "serializedTransaction" field — pass it as the `serializedTransaction`
+argument of broadcast_signed_raw_transaction.
 
 CONTRACT DETAILS:
 - Name: SimpleStorage
@@ -52,7 +53,7 @@ const userPrompt = `Please deploy and verify the SimpleStorage contract:
 1. Check my wallet balance (need gas for deployment)
 2. Deploy the contract:
    - Call prepare_transaction with from="${walletAddress}", data="${compiled.bytecode}" (no "to" field — this is a contract creation)
-   - Use the "signedTransaction" from the result with broadcast_signed_raw_transaction
+   - Pass "serializedTransaction" from the result to broadcast_signed_raw_transaction as the `serializedTransaction` argument
 3. Wait for the transaction receipt (wait_for_transaction)
 4. Get the receipt to find the deployed contract address (get_transaction_receipt)
 5. Verify the contract on the explorer:
