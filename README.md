@@ -279,6 +279,8 @@ arc-agent-kit/
 └── docker-compose.yml
 ```
 
+<img width="1210" height="120" alt="arc banner-dark" src="https://github.com/user-attachments/assets/2a623236-4762-4c62-8fca-c66723b17b96" />
+
 ## MCP Tools
 
 The Arc MCP server at `https://api.arc.exploreme.pro/mcp` exposes 79 tools across these categories:
