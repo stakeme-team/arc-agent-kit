@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "arc": {
+      "type": "http",
+      "url": "https://api.arc.exploreme.pro/mcp"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+node_modules/
+dist/
+
+# Security: private keys and keystores
+.env
+.keystore/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Personal Make targets
+Makefile.local

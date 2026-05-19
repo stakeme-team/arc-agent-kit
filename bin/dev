@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Wrapper for running arbitrary commands in the dev container.
+# Usage: ./bin/dev npx tsx -e "console.log('hi')"
+#        ./bin/dev npm run wallet:simple
+#        ./bin/dev sh
+exec docker compose run --rm dev "$@"
