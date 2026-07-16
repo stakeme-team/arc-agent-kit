@@ -9,7 +9,7 @@ MCP-based toolkit for the Arc blockchain. Two usage modes:
 
 MCP server: `https://api.arc.exploreme.pro/mcp` (HTTP transport).
 
-**Target network: Arc testnet** (chain ID `5042002`). Native gas token is **USDC** (denom `ausdc`). The agent can fund the wallet via `claim_faucet_tokens`.
+**Target network: Arc mainnet** (chain ID `5042`). Native gas token is **USDC** (denom `ausdc`). There is no faucet — the wallet must be funded with real USDC before it can send or deploy.
 
 ## Key Architecture Decisions
 
@@ -64,7 +64,7 @@ The agent CAN safely run `npx tsx scripts/wallet-manager.ts generate --simple`:
 
 ### Agent instructions
 - `CLAUDE.md` — agent rules
-- `.claude/skills/wallet.md` — `/wallet` command (address + balance, can claim from faucet)
+- `.claude/skills/wallet.md` — `/wallet` command (address + balance)
 - `.claude/skills/send.md` — `/send` command
 - `.claude/skills/deploy.md` — `/deploy` command
 - `.claude/settings.json` — `guard.sh` hook config
@@ -73,9 +73,11 @@ The agent CAN safely run `npx tsx scripts/wallet-manager.ts generate --simple`:
 
 - MCP URL: `api.arc.exploreme.pro/mcp`
 - Native token: `USDC` (denom: `ausdc`)
-- Chain ID: `5042002`
+- Chain ID: `5042`
 - Env var for MCP override: `ARC_MCP_URL`
-- **Faucet available on Arc testnet** — `claim_faucet_tokens` and `get_faucet_payout_status` are exposed; the `/wallet` skill can claim test USDC if balance is 0. Demos numbered 01 (send) and 02 (deploy).
+- **No faucet on mainnet** — fund the wallet with real USDC before running the demos (numbered 01 send, 02 deploy). `claim_faucet_tokens` still exists on the server but returns a no-op explainer for mainnet addresses.
+- The server exposes ~88 tools total; only a subset is used by this kit's flows (see `CLAUDE.md`). Tool names do **not** follow an `_evm_` naming convention — e.g. balance is `rpc_native_balance`/`get_account`, not `get_balance`; blocks are `list_blocks`/`get_block`, not `list_evm_blocks`.
+- Some tool descriptions returned by the server say "0G" or reference `ZEROG_FAUCET_URL` — leftover text from a shared MCP server implementation, not an Arc-specific bug in this kit. The chain data itself is correctly Arc/USDC.
 
 ## References
 

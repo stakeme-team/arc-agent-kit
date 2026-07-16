@@ -10,7 +10,7 @@ export async function getArcMCPClient() {
 
   mcpClient = await createMCPClient({
     transport: {
-      type: "sse",
+      type: "http",
       url,
     },
   });

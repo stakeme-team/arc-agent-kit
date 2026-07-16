@@ -28,13 +28,11 @@ description: Create wallet (if missing) and report its address and balance
       grep WALLET_ADDRESS .env | cut -d'=' -f2
       ```
 
-3. Check current balance using MCP tool `get_balance` with the wallet address.
+3. Check current balance using MCP tool `rpc_native_balance` with the wallet address (raw wei balance, live RPC).
 
-4. Report the address and balance to the user. If balance is 0, offer to claim
-   test USDC from the faucet by calling MCP `claim_faucet_tokens` with the
-   wallet address. After claiming, you can check `get_faucet_payout_status`
-   with the returned request ID to confirm. Arc is a testnet — USDC is the
-   native gas token.
+4. Report the address and balance to the user. Arc is mainnet and USDC is the
+   native gas token — there is no faucet. If balance is 0, tell the user to
+   fund the address with real USDC before sending or deploying anything.
 
 ## SECURITY
 - NEVER read PRIVATE_KEY from .env

@@ -2,6 +2,8 @@
 
 Copy-paste these into Claude Code, Cursor, or Codex chat.
 
+> **Arc is mainnet.** USDC has real value and there is no faucet. The "send to a random address" prompts below are irreversible — only use amounts you're fine losing.
+
 ## Wallet & Balance
 
 ```

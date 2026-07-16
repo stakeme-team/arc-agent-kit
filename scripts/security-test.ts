@@ -1,7 +1,10 @@
 import { execSync } from "child_process";
 import * as path from "path";
 
-const GUARD_SCRIPT = path.resolve("scripts/guard.sh");
+// Forward slashes: this path is interpolated unquoted into a bash -c string
+// (see execSync calls below), and bash treats backslashes as escape chars,
+// mangling a Windows-style absolute path.
+const GUARD_SCRIPT = path.resolve("scripts/guard.sh").replace(/\\/g, "/");
 
 // Commands that MUST be blocked
 const ATTACKS = [
@@ -64,6 +67,7 @@ for (const attack of ATTACKS) {
   try {
     execSync(`bash ${GUARD_SCRIPT} '${attack.cmd.replace(/'/g, "'\\''")}'`, {
       stdio: "pipe",
+      shell: "bash",
     });
     // Exit 0 = not blocked = FAIL
     console.log(`  \u2717 ${attack.desc.padEnd(30)} \u2192 NOT BLOCKED (FAIL)`);
@@ -87,6 +91,7 @@ for (const safe of SAFE_COMMANDS) {
   try {
     execSync(`bash ${GUARD_SCRIPT} '${safe.cmd.replace(/'/g, "'\\''")}'`, {
       stdio: "pipe",
+      shell: "bash",
     });
     // Exit 0 = allowed = PASS
     console.log(`  \u2713 ${safe.desc.padEnd(30)} \u2192 ALLOWED`);

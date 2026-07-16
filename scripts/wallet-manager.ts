@@ -44,7 +44,8 @@ function existingWalletAddress(): string | null {
   if (!fs.existsSync(ENV_FILE)) return null;
   const content = fs.readFileSync(ENV_FILE, "utf-8");
   const match = content.match(/^WALLET_ADDRESS=(.+)$/m);
-  const addr = match?.[1]?.trim();
+  // Strip inline `# comment` (e.g. the placeholder line copied from .env.example)
+  const addr = match?.[1]?.split("#")[0]?.trim();
   return addr || null;
 }
 
@@ -93,7 +94,7 @@ async function generateSimple(): Promise<void> {
   console.log(`\u2713 Saved to .env (WALLET_ADDRESS + PRIVATE_KEY)`);
   console.log(`\u2713 Mode: simple`);
   console.log(``);
-  console.log(`Next: claim test USDC from the Arc faucet via the agent (claim_faucet_tokens), then run npm run demo:send`);
+  console.log(`Next: fund this address with real USDC on Arc mainnet, then run npm run demo:send`);
 }
 
 async function generateSecure(): Promise<void> {

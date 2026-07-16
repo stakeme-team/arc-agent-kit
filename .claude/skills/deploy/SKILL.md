@@ -12,7 +12,7 @@ description: Deploy and verify a smart contract on Arc
    grep WALLET_ADDRESS .env | cut -d'=' -f2
    ```
 
-2. Check balance using MCP `get_balance`. Deployment needs gas.
+2. Check balance using MCP `rpc_native_balance`. Deployment needs gas (real USDC — Arc mainnet has no faucet).
 
 3. Read the compiled contract:
    ```bash
@@ -35,23 +35,20 @@ description: Deploy and verify a smart contract on Arc
    - Call MCP `broadcast_signed_raw_transaction` with signed hex
 
 7. Wait for receipt:
-   - Call MCP `wait_for_transaction` with tx hash
-   - Call MCP `get_transaction_receipt` — extract `contractAddress`
+   - Call MCP `wait_for_transaction` with tx hash — the result already includes the receipt; extract `contractAddress` from it (no separate receipt-lookup tool exists)
 
 8. Verify the contract:
-   - Call MCP `get_evm_compiler_versions` to find Solidity versions
+   - Call MCP `verifier_compiler_versions` to find Solidity versions
    - Read source: `cat contracts/SimpleStorage.sol`
-   - Call MCP `verify_evm_contract_standard_json` with:
+   - Call MCP `verify_contract_std_json` with:
      - `address`: deployed contract address
-     - `compilerType`: "solidity"
-     - `compilerVersion`: matching version (e.g., "v0.8.28+commit.7893614a")
-     - `standardJson`: Solidity standard JSON input with the source code
+     - `body`: passthrough object forwarded to the verifier — include `compiler_version` (matching version from step 8, e.g. "v0.8.28+commit.7893614a"), `contract_name`: "SimpleStorage", and `input`: the Solidity standard-JSON compiler input containing the source code
 
-9. Test the contract:
-   - Call MCP `read_evm_contract` with:
+9. Test the contract (only works once verified — `rpc_read_contract` decodes against the verified ABI):
+   - Call MCP `rpc_read_contract` with:
      - `address`: contract address
-     - `abi`: the ABI from compiled JSON
-     - `functionName`: "retrieve"
+     - `method`: "retrieve"
+     - `args`: []
    - Report the result
 
 10. Report to user:

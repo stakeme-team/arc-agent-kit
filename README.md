@@ -29,7 +29,7 @@ Built for **humans**. Perfect for **AI**.
 - **Subscription** (free) — connect MCP to Claude Code / Cursor / Codex, use your existing subscription.
 - **AI SDK** (developers) — programmatic agents via Vercel AI SDK with Claude or OpenAI.
 
-**Test-friendly.** Arc is a testnet (chain ID `5042002`, native gas token **USDC**). The agent can claim test tokens from the built-in faucet via `claim_faucet_tokens`.
+**Live on Arc mainnet.** Chain ID `5042`, native gas token **USDC**. Transactions move real value — fund your wallet with real USDC before sending or deploying.
 
 ## Architecture
 
@@ -52,7 +52,7 @@ Built for **humans**. Perfect for **AI**.
 │          │  query blocks   │
 │ Key in   │  verify         │
 │ .env or  │  explorer       │
-│ keystore │  faucet         │
+│ keystore │                 │
 └──────────┴─────────────────┘
 ```
 
@@ -83,9 +83,11 @@ Claude Code auto-detects `.mcp.json` and connects to Arc. Use the built-in skill
 
 | Skill | What it does |
 |---|---|
-| `/wallet` | Show wallet address and balance; claim test USDC from the faucet if balance is 0 |
+| `/wallet` | Show wallet address and balance |
 | `/send` | Send tokens to a random address from a recent block |
 | `/deploy` | Deploy and verify a smart contract |
+
+> **Real funds.** Arc mainnet USDC has real value. `/send` picks a random recipient from a recent block — only use it with an amount you're fine losing.
 
 Or just chat: *"Send 0.001 USDC to a random address from the latest block"*
 
@@ -283,18 +285,20 @@ arc-agent-kit/
 
 ## MCP Tools
 
-The Arc MCP server at `https://api.arc.exploreme.pro/mcp` exposes 79 tools across these categories:
+The Arc MCP server at `https://api.arc.exploreme.pro/mcp` exposes 88 tools across these categories:
 
 | Category | Examples |
 |---|---|
-| Transactions | `prepare_native_transfer`, `prepare_erc20_transfer`, `prepare_transaction`, `broadcast_signed_raw_transaction`, `wait_for_transaction` |
-| Balances | `get_balance`, `get_token_balance`, `get_erc1155_balance` |
-| Blocks | `list_evm_blocks`, `get_evm_block_by_height`, `get_evm_block_rpc` |
-| Contracts | `read_evm_contract`, `verify_evm_contract_standard_json`, `prepare_contract_write` |
-| Tokens | `list_erc20_tokens`, `get_erc20_token_by_address`, `get_erc721_token_by_address` |
-| Explorer | `explorer_search`, `get_evm_account_by_address`, `list_top_accounts` |
-| Faucet | `claim_faucet_tokens`, `get_faucet_payout_status` |
-| Validators | `list_validators`, `get_validators_active_set`, `get_validator_signatures` |
+| Transactions | `prepare_native_transfer`, `prepare_erc20_transfer`, `prepare_transaction`, `prepare_delegate`, `prepare_undelegate`, `broadcast_signed_raw_transaction`, `wait_for_transaction` |
+| Balances | `rpc_native_balance`, `rpc_token_balance`, `balance_at_block`, `get_account` |
+| Blocks | `list_blocks`, `get_block`, `list_block_transactions` |
+| Contracts | `rpc_read_contract`, `verify_contract_std_json`, `verify_contract_multi_part`, `verifier_compiler_versions`, `get_contract` |
+| Tokens | `list_tokens`, `get_token`, `list_token_holders`, `list_account_tokens` |
+| Explorer | `search`, `get_account`, `list_top_accounts`, `list_top_contracts` |
+| Validators | `list_validators`, `get_validator`, `validator_apr`, `validator_delegations` |
+| Staking | `prepare_delegate`, `prepare_undelegate`, `account_delegations`, `list_staking_events` |
+
+> Tool descriptions returned by the server occasionally still say "0G" or reference `ZEROG_FAUCET_URL` — leftover text from a shared MCP implementation. The underlying chain data is genuinely Arc/USDC (verified against `chain_network` and the mainnet RPC directly); only some human-readable strings are mislabeled.
 
 ## License
 

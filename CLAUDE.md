@@ -6,16 +6,17 @@ You are working with the Arc blockchain through an MCP server. This file tells y
 
 ## MCP Server
 
-The Arc MCP server is connected automatically via `.mcp.json`. It provides tools for:
-- **Transactions**: `prepare_native_transfer`, `prepare_erc20_transfer`, `prepare_transaction`, `broadcast_signed_raw_transaction`, `wait_for_transaction`
-- **Balances**: `get_balance`, `get_token_balance`
-- **Blocks**: `list_evm_blocks`, `get_evm_block_by_height`
-- **Contracts**: `read_evm_contract`, `verify_evm_contract_standard_json`, `get_evm_compiler_versions`
-- **Tokens**: `list_erc20_tokens`, `get_erc20_token_by_address`, `get_erc721_token_by_address`
-- **Explorer**: `explorer_search`, `get_evm_account_by_address`
-- **Faucet**: `claim_faucet_tokens`, `get_faucet_payout_status` (Arc is a testnet, native gas token is **USDC**)
+The Arc MCP server is connected automatically via `.mcp.json`. It exposes ~88 tools; the ones this kit's flows use:
+- **Transactions**: `prepare_native_transfer`, `prepare_erc20_transfer`, `prepare_transaction`, `prepare_delegate`, `prepare_undelegate`, `broadcast_signed_raw_transaction`, `wait_for_transaction`
+- **Balances**: `rpc_native_balance`, `rpc_token_balance`, `get_account` (full profile: balance, tx_count, tokens held)
+- **Blocks**: `list_blocks`, `get_block`
+- **Contracts**: `rpc_read_contract`, `verify_contract_std_json`, `verify_contract_multi_part`, `verifier_compiler_versions`, `get_contract`, `get_verification_status`
+- **Tokens**: `list_tokens`, `get_token`
+- **Explorer**: `search`, `get_account`, `list_top_accounts`
 
-> Arc is a testnet (chain ID `5042002`). Use `claim_faucet_tokens` to fund the wallet with test USDC. Do NOT use `generate_disposable_test_wallet` — it exposes private keys.
+> Arc is **mainnet** (chain ID `5042`, native gas token **USDC**). There is no faucet — the wallet must be funded with real USDC before sending or deploying (`claim_faucet_tokens` still exists but is a no-op explainer on mainnet — do not rely on it). Every transaction moves real value; double-check recipient addresses and amounts before broadcasting. Do NOT use `generate_disposable_test_wallet` — it exposes private keys.
+>
+> Some tool descriptions returned by this MCP server still say "0G" / reference `ZEROG_FAUCET_URL` (leftover boilerplate from a shared server implementation) — ignore that text. The actual chain data is Arc/USDC; verified independently against `chain_network` and the mainnet RPC.
 
 ## SECURITY RULES — MANDATORY
 
@@ -57,13 +58,17 @@ Call `wait_for_transaction` with the tx hash.
 
 Different prepare tools use different field names for the amount/value. Picking the wrong one returns a validation error. Use exactly:
 
-| Tool | Value field | Format | Example |
-|---|---|---|---|
-| `prepare_native_transfer` | `amount` | decimal ether (parseEther) | `"0.001"` |
-| `prepare_erc20_transfer` | `amount` | human decimal using token decimals | `"1.5"` |
-| `prepare_transaction` | `valueWei` | decimal wei string | `"1000000000000000"` |
+| Tool | Required fields | Value field | Format | Example |
+|---|---|---|---|---|
+| `prepare_native_transfer` | `from`, `to`, `amount` | `amount` | decimal (parseEther-style, e.g. USDC amount) | `"0.001"` |
+| `prepare_erc20_transfer` | `from`, `token`, `to`, `amount` | `amount` | human decimal using token decimals (`decimals`, default 18) | `"1.5"` |
+| `prepare_transaction` | `from` only (`to`/`value`/`data`/`gas` optional) | `value` | decimal or `0x`-hex wei; omit `to` for contract creation | `"1000000000000000"` |
+| `prepare_delegate` | `from`, `validator`, `amount` | `amount` | decimal stake amount | `"10"` |
+| `prepare_undelegate` | `from`, `validator`, `shares` | `shares` | decimal share amount (uint) | `"10"` |
 
 For `broadcast_signed_raw_transaction` the input argument is **`serializedTransaction`** (full signed `0x…` hex). The signing-bridge in `src/signing-bridge.ts` already returns that field with the same name — pass it through verbatim.
+
+`wait_for_transaction(hash)` already returns the full receipt (including `contractAddress` for deployments) — there is no separate receipt-lookup tool, don't look for one.
 
 ## Contract Deployment Flow
 
@@ -71,18 +76,16 @@ For `broadcast_signed_raw_transaction` the input argument is **`serializedTransa
 2. Call `prepare_transaction` with `from` = wallet address, no `to` field, `data` = bytecode
 3. Sign: `echo '<unsigned_tx>' | npx tsx scripts/sign-tx.ts`
 4. Broadcast signed tx
-5. Wait for receipt — `contractAddress` field contains the deployed address
-6. Verify using `verify_evm_contract_standard_json`
+5. `wait_for_transaction` — its result's `contractAddress` field is the deployed address
+6. Verify using `verify_contract_std_json`
 
 ## Contract Verification Flow
 
-1. Call `get_evm_compiler_versions` to find the correct Solidity version
+1. Call `verifier_compiler_versions` to find the correct Solidity version
 2. Read source from `contracts/SimpleStorage.sol`
-3. Call `verify_evm_contract_standard_json` with:
+3. Call `verify_contract_std_json` with:
    - `address`: deployed contract address
-   - `compilerType`: "solidity"
-   - `compilerVersion`: from step 1
-   - `standardJson`: compiler standard JSON input
+   - `body`: a passthrough object forwarded as-is to the verifier — include `compiler_version` (from step 1), `contract_name`, and `input` (the standard-JSON compiler input containing the source)
 
 ## Wallet Setup
 
@@ -91,6 +94,8 @@ If `grep WALLET_ADDRESS .env` returns empty or .env doesn't exist, create a wall
 npx tsx scripts/wallet-manager.ts generate --simple
 ```
 This is SAFE to run — it outputs ONLY the wallet address. The private key is saved to `.env` internally but NEVER printed to stdout.
+
+The new wallet has a 0 balance. Since Arc is mainnet, tell the user the address and ask them to fund it with real USDC — do not attempt to source funds yourself.
 
 After creating, read the address:
 ```bash

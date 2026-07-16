@@ -6,11 +6,36 @@ const PREPARE_TOOLS = [
   "prepare_native_transfer",
   "prepare_transaction",
   "prepare_erc20_transfer",
-  "prepare_erc721_transfer",
-  "prepare_erc1155_transfer",
-  "prepare_token_approval",
-  "prepare_contract_write",
+  "prepare_delegate",
+  "prepare_undelegate",
 ];
+
+/**
+ * MCP tool results come wrapped in the standard envelope:
+ * { content: [{ type: "text", text: "... summary ...\n\n{...tx json...}" }],
+ *   structuredContent: { data: {...tx fields...}, summary, ui_url }, isError }
+ * The actual unsigned-tx fields live at structuredContent.data — not at the
+ * top level of the result — so that's what needs signing, not the envelope.
+ */
+function extractUnsignedTx(result: unknown): Record<string, unknown> | null {
+  if (result && typeof result === "object") {
+    const r = result as Record<string, unknown>;
+    if (r.isError) return null;
+    const structured = r.structuredContent as
+      | { data?: Record<string, unknown> }
+      | undefined;
+    if (structured?.data) return structured.data;
+    return r;
+  }
+  if (typeof result === "string") {
+    try {
+      return JSON.parse(result);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 /**
  * Wraps MCP tools with signing bridge.
@@ -41,13 +66,10 @@ export function augmentToolsWithSigning(
           // Call original MCP tool
           const result = await originalExecute(args, options);
 
-          // Parse the unsigned tx from result
-          let unsigned: Record<string, unknown>;
-          try {
-            unsigned =
-              typeof result === "string" ? JSON.parse(result) : result;
-          } catch {
-            // If we can't parse, return as-is
+          // Extract the unsigned tx fields from the MCP result envelope
+          const unsigned = extractUnsignedTx(result);
+          if (!unsigned) {
+            // Tool errored or returned something we can't parse — pass through as-is
             return result;
           }
 
@@ -77,9 +99,10 @@ export function augmentToolsWithSigning(
   }
 
   // Add a helper tool so the agent can get the wallet address
+  // (inputSchema, not parameters — matches the shape real MCP tools use in this SDK version)
   augmented["get_wallet_address"] = {
     description: "Get the local wallet address (no private key exposure)",
-    parameters: { type: "object" as const, properties: {} },
+    inputSchema: { type: "object" as const, properties: {} },
     execute: async () => {
       return JSON.stringify({ address: getAddress() });
     },
