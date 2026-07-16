@@ -1,22 +1,26 @@
 # Arc Agent Kit
 
-You are working with the Arc blockchain through an MCP server. This file tells you how to interact with it safely and effectively.
+You are working with the **Arc blockchain** (chain ID **5042**, native **USDC**, 18 decimals) through an MCP server. This file tells you how to interact with it safely and effectively.
+
+> ⚠️ **MAINNET — REAL FUNDS.** The default network is Arc mainnet. `prepare_native_transfer` / `prepare_erc20_transfer` / `prepare_transaction` / `prepare_delegate` move **real USDC**. Prefer **secure mode with manual approval** (`npm run signer -- --manual`) so every signature needs your `y/n`. There is **no faucet on mainnet** — fund the address from an exchange/bridge, not from this kit.
+
+> 🟦 **This kit does not hold or expose your key to the server.** The MCP server is **read + prepare/broadcast only** — it never signs. Signing happens locally with your private key (viem). Do NOT use `generate_disposable_test_wallet` — it exposes private keys.
 
 > **For architecture details:** See `docs/ARCHITECTURE.md`.
 
 ## MCP Server
 
-The Arc MCP server is connected automatically via `.mcp.json`. It exposes ~88 tools; the ones this kit's flows use:
-- **Transactions**: `prepare_native_transfer`, `prepare_erc20_transfer`, `prepare_transaction`, `prepare_delegate`, `prepare_undelegate`, `broadcast_signed_raw_transaction`, `wait_for_transaction`
-- **Balances**: `rpc_native_balance`, `rpc_token_balance`, `get_account` (full profile: balance, tx_count, tokens held)
-- **Blocks**: `list_blocks`, `get_block`
-- **Contracts**: `rpc_read_contract`, `verify_contract_std_json`, `verify_contract_multi_part`, `verifier_compiler_versions`, `get_contract`, `get_verification_status`
-- **Tokens**: `list_tokens`, `get_token`
-- **Explorer**: `search`, `get_account`, `list_top_accounts`
+The Arc MCP server is connected automatically via `.mcp.json` (`https://api.arc.exploreme.pro/mcp`). It exposes ~88 tools; the ones this kit's flows use:
+- **Transactions (write):** `prepare_native_transfer`, `prepare_erc20_transfer`, `prepare_transaction`, `broadcast_signed_raw_transaction`, `wait_for_transaction`
+- **Staking (write):** `prepare_delegate`, `prepare_undelegate`
+- **Staking (read):** `list_validators`, `get_validator`, `validator_apr`, `account_delegations`
+- **Balances / accounts (read):** `rpc_native_balance`, `rpc_token_balance`, `get_account` (full profile: balance, tx_count, tokens held)
+- **Blocks / txs (read):** `list_blocks`, `get_block`, `list_transactions`
+- **Contracts:** `rpc_read_contract`, `verify_contract_std_json`, `verify_contract_multi_part`, `verifier_compiler_versions`, `get_contract`, `get_verification_status`
+- **Tokens (read):** `list_tokens`, `get_token`
+- **Explorer / search:** `search`, `list_top_accounts`
 
-> Arc is **mainnet** (chain ID `5042`, native gas token **USDC**). There is no faucet — the wallet must be funded with real USDC before sending or deploying (`claim_faucet_tokens` still exists but is a no-op explainer on mainnet — do not rely on it). Every transaction moves real value; double-check recipient addresses and amounts before broadcasting. Do NOT use `generate_disposable_test_wallet` — it exposes private keys.
->
-> Some tool descriptions returned by this MCP server still say "0G" / reference `ZEROG_FAUCET_URL` (leftover boilerplate from a shared server implementation) — ignore that text. The actual chain data is Arc/USDC; verified independently against `chain_network` and the mainnet RPC.
+> 💡 Some tool descriptions returned by this MCP server still say "0G" / reference `ZEROG_FAUCET_URL` (leftover boilerplate from a shared server implementation) — ignore that text. The actual chain data is Arc/USDC; verified independently against `chain_network` and the mainnet RPC.
 
 ## SECURITY RULES — MANDATORY
 

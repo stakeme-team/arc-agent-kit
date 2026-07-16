@@ -1,35 +1,43 @@
-<table border="0" cellpadding="0" cellspacing="0">
-<tr>
-<td valign="top">
+<div align="center">
+
+<img src="assets/logo.png" alt="Arc Agent Kit" width="96">
 
 # Arc Agent Kit
 
-Arc Agent Kit is an all-in-one MCP toolkit for the [Arc](https://arc.exploreme.pro) blockchain written in TypeScript. It combines wallet operations, local-only signing, contract deployment and verification, and block and token exploration — usable from Claude Code, Cursor, Codex, or directly via the Vercel AI SDK.
+**All-in-one MCP toolkit for the [Arc](https://arc.exploreme.pro) blockchain, in TypeScript.**
+
+Wallet operations · local-only signing · transfers · contract deploy & verification · staking (delegate / undelegate) · full chain exploration — from **Claude Code**, **Cursor**, **Codex**, or directly via the **Vercel AI SDK**.
 
 Built for **humans**. Perfect for **AI**.
 
-</td>
-<td valign="top" width="220" align="right">
-<img src="assets/logo.png" alt="Arc Agent Kit" width="180">
-</td>
-</tr>
-</table>
+[![MCP](https://img.shields.io/badge/MCP-server-6E56CF)](https://modelcontextprotocol.io)
+[![Arc](https://img.shields.io/badge/Arc-mainnet_5042-0a3ab5)](https://arc.exploreme.pro)
+[![Node](https://img.shields.io/badge/Node-%E2%89%A520-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![viem](https://img.shields.io/badge/built_with-viem-FFC517)](https://viem.sh)
+[![License](https://img.shields.io/badge/License-MIT-blue)](#license)
+
+</div>
 
 ---
 
 ## Why Arc Agent Kit
 
-**Your private key never leaves your machine.** MCP only prepares unsigned transactions — signing happens locally, the key is never sent to the AI model or remote server.
+**Your private key never leaves your machine.** MCP only prepares *unsigned* transactions — signing happens locally, and the key is never sent to the AI model or a remote server.
 
 **Two protection levels.**
 - **Simple** — a guard hook blocks the agent from reading `.env`.
-- **Secure** — encrypted keystore + signing daemon in a separate isolated process; the agent only ever receives the signed hex.
+- **Secure** — encrypted keystore + a signing daemon in a separate, isolated process; the agent only ever receives the signed hex.
 
 **Two ways to use.**
-- **Subscription** (free) — connect MCP to Claude Code / Cursor / Codex, use your existing subscription.
-- **AI SDK** (developers) — programmatic agents via Vercel AI SDK with Claude or OpenAI.
+- **Subscription** (free) — connect MCP to Claude Code / Cursor / Codex and use your existing subscription.
+- **AI SDK** (developers) — programmatic agents via the Vercel AI SDK with Claude or OpenAI.
 
-**Live on Arc mainnet.** Chain ID `5042`, native gas token **USDC**. Transactions move real value — fund your wallet with real USDC before sending or deploying.
+**Arc-native.** Beyond plain EVM transfers: delegate USDC to validators (`prepare_delegate`), undelegate, deploy and verify Solidity contracts on-chain, and explore the full chain (blocks, txs, accounts, contracts, tokens, validators).
+
+> ⚠️ **Mainnet — real funds.** The default network is **Arc mainnet (chain ID 5042, native USDC)**. `/send`, `/deploy`, and any `prepare_delegate`/`prepare_undelegate` call move **real USDC**. There is **no faucet on mainnet** — fund your address from an exchange/bridge. Prefer **secure mode with manual approval** (`npm run signer -- --manual`) so every signature needs your `y/n`.
+
+---
 
 ## Architecture
 
@@ -49,12 +57,16 @@ Built for **humans**. Perfect for **AI**.
 │          │                 │
 │ Signs tx │  prepare_*      │
 │ locally  │  broadcast      │
-│          │  query blocks   │
+│          │  query chain    │
 │ Key in   │  verify         │
 │ .env or  │  explorer       │
-│ keystore │                 │
+│ keystore │  staking        │
 └──────────┴─────────────────┘
 ```
+
+**Key principle:** the private key NEVER leaves your machine. MCP prepares the unsigned tx → you sign locally → the signed hex is broadcast back through MCP.
+
+---
 
 ## Requirements
 
@@ -65,6 +77,8 @@ Built for **humans**. Perfect for **AI**.
 The kit ships with two execution modes:
 - **`native`** (default) — runs `npm install` and scripts directly on the host. Fastest, simplest.
 - **`docker`** — installs and runs everything inside Docker containers. Install scripts can't touch the host. Recommended if you don't fully trust npm dependencies.
+
+---
 
 ## Quick Start — Claude Code
 
@@ -84,14 +98,18 @@ Claude Code auto-detects `.mcp.json` and connects to Arc. Use the built-in skill
 | Skill | What it does |
 |---|---|
 | `/wallet` | Show wallet address and balance |
-| `/send` | Send tokens to a random address from a recent block |
+| `/send` | Send tokens to a random address from a recent transaction |
 | `/deploy` | Deploy and verify a smart contract |
 
-> **Real funds.** Arc mainnet USDC has real value. `/send` picks a random recipient from a recent block — only use it with an amount you're fine losing.
+> **Real funds.** Arc mainnet USDC has real value. `/send` picks a random recipient from a recent transaction — only use it with an amount you're fine losing.
 
-Or just chat: *"Send 0.001 USDC to a random address from the latest block"*
+Or just chat:
+
+> *"Send 0.001 USDC to a random address from a recent transaction"*
 
 > See also: [Cursor setup](docs/cursor-setup.md) · [Codex setup](docs/codex-setup.md)
+
+---
 
 ## Quick Start — AI SDK
 
@@ -113,6 +131,8 @@ Switch between Claude and OpenAI:
 AI_PROVIDER=anthropic   # or openai
 ```
 
+---
+
 ## Run in Docker
 
 Both quick starts above default to running on the host. To run everything inside Docker (isolating npm install and the signer from your host), pin Docker mode once:
@@ -125,6 +145,8 @@ make wallet
 
 Switch back with `make use-native`. You can also override per-command without pinning: `MODE=docker make install`.
 
+---
+
 ## Security
 
 ### Simple Mode (default)
@@ -135,14 +157,14 @@ Private key in `.env`, protected by guard hooks that block the agent from readin
 npx tsx scripts/wallet-manager.ts generate --simple
 ```
 
-Guard blocks 26+ attack vectors (tested):
+Guard blocks 20 attack vectors (27 checks total, tested):
 ```bash
 npm run security-test
 # ✓ cat .env           → BLOCKED
 # ✓ grep PRIVATE .env  → BLOCKED
 # ✓ echo $PRIVATE_KEY  → BLOCKED
 # ✓ python3 read .env  → BLOCKED
-# ... 26/26 passed ✓
+# ... 27/27 passed ✓
 ```
 
 ### Secure Mode (signing daemon)
@@ -232,6 +254,27 @@ docker compose up signer
 
 </details>
 
+---
+
+## MCP Tools
+
+The Arc MCP server at `https://api.arc.exploreme.pro/mcp` exposes 88 tools; the categories this kit's flows use:
+
+| Category | Tools |
+|---|---|
+| **Transactions** (write) | `prepare_native_transfer`, `prepare_erc20_transfer`, `prepare_transaction`, `broadcast_signed_raw_transaction`, `wait_for_transaction` |
+| **Staking** (write) | `prepare_delegate`, `prepare_undelegate` |
+| **Staking** (read) | `list_validators`, `get_validator`, `validator_apr`, `validator_delegations`, `account_delegations` |
+| **Balances / accounts** | `rpc_native_balance`, `rpc_token_balance`, `balance_at_block`, `get_account` |
+| **Blocks / txs** | `list_blocks`, `get_block`, `list_block_transactions`, `list_transactions`, `get_transaction` |
+| **Contracts** | `rpc_read_contract`, `verify_contract_std_json`, `verify_contract_multi_part`, `verifier_compiler_versions`, `get_contract` |
+| **Tokens** | `list_tokens`, `get_token`, `list_token_holders`, `list_account_tokens` |
+| **Explorer / search** | `search`, `list_top_accounts`, `list_top_contracts` |
+
+> There is no faucet on Arc mainnet — `claim_faucet_tokens` still exists but returns a no-op explainer for mainnet addresses. Some tool descriptions returned by the server say "0G" or reference `ZEROG_FAUCET_URL` — leftover text from a shared MCP implementation; the underlying chain data is genuinely Arc/USDC (verified against `chain_network` and the mainnet RPC directly).
+
+---
+
 ## Project Structure
 
 ```
@@ -253,7 +296,7 @@ arc-agent-kit/
 │   ├── sign-tx.ts               # Sign tx (stdin → stdout)
 │   ├── signer-daemon.ts         # Signing daemon (secure mode)
 │   ├── guard.sh                 # Block agent from reading keys
-│   └── security-test.ts         # Test guard (26+ attack vectors)
+│   └── security-test.ts         # Test guard (20 attack vectors, 27 checks)
 │
 ├── src/                         # AI SDK core library
 │   ├── mcp-client.ts            # MCP client factory
@@ -281,24 +324,7 @@ arc-agent-kit/
 └── docker-compose.yml
 ```
 
-<img width="1210" height="120" alt="arc banner-dark" src="https://github.com/user-attachments/assets/2a623236-4762-4c62-8fca-c66723b17b96" />
-
-## MCP Tools
-
-The Arc MCP server at `https://api.arc.exploreme.pro/mcp` exposes 88 tools across these categories:
-
-| Category | Examples |
-|---|---|
-| Transactions | `prepare_native_transfer`, `prepare_erc20_transfer`, `prepare_transaction`, `prepare_delegate`, `prepare_undelegate`, `broadcast_signed_raw_transaction`, `wait_for_transaction` |
-| Balances | `rpc_native_balance`, `rpc_token_balance`, `balance_at_block`, `get_account` |
-| Blocks | `list_blocks`, `get_block`, `list_block_transactions` |
-| Contracts | `rpc_read_contract`, `verify_contract_std_json`, `verify_contract_multi_part`, `verifier_compiler_versions`, `get_contract` |
-| Tokens | `list_tokens`, `get_token`, `list_token_holders`, `list_account_tokens` |
-| Explorer | `search`, `get_account`, `list_top_accounts`, `list_top_contracts` |
-| Validators | `list_validators`, `get_validator`, `validator_apr`, `validator_delegations` |
-| Staking | `prepare_delegate`, `prepare_undelegate`, `account_delegations`, `list_staking_events` |
-
-> Tool descriptions returned by the server occasionally still say "0G" or reference `ZEROG_FAUCET_URL` — leftover text from a shared MCP implementation. The underlying chain data is genuinely Arc/USDC (verified against `chain_network` and the mainnet RPC directly); only some human-readable strings are mislabeled.
+---
 
 ## License
 
