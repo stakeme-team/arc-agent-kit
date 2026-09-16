@@ -5,37 +5,29 @@ description: Create wallet (if missing) and report its address and balance
 
 # /wallet — Wallet Setup & Balance
 
+Arc is **mainnet**. Native gas is **real USDC**. There is no faucet.
+
 ## Steps
 
-1. Check if .env exists and has a wallet:
+1. Check if .env has a wallet:
    ```bash
    grep WALLET_ADDRESS .env | cut -d'=' -f2
    ```
 
-2. If no wallet address found (empty output or file not found):
-   a. Ensure dependencies are installed (one-time):
-      ```bash
-      make install
-      ```
-      Uses native or Docker mode depending on user setup (see Makefile).
-   b. Create wallet:
-      ```bash
-      make wallet
-      ```
-      This is SAFE — outputs ONLY the address, never the private key.
-   c. After creation, read the new address:
-      ```bash
-      grep WALLET_ADDRESS .env | cut -d'=' -f2
-      ```
+2. If empty:
+   ```bash
+   make install
+   make wallet
+   grep WALLET_ADDRESS .env | cut -d'=' -f2
+   ```
+   `make wallet` prints ONLY the address.
 
-3. Check current balance using MCP tool `rpc_native_balance` with the wallet address (raw wei balance, live RPC).
+3. Balance: MCP `get_account` with `address` = wallet. Do **not** call `rpc_native_balance` — that tool does not exist on the live server.
 
-4. Report the address and balance to the user. Arc is mainnet and USDC is the
-   native gas token — there is no faucet. If balance is 0, tell the user to
-   fund the address with real USDC before sending or deploying anything.
+4. Report address and balance. If zero, tell the user to fund with real USDC from an exchange or bridge before sending or deploying.
 
 ## SECURITY
-- NEVER read PRIVATE_KEY from .env
-- NEVER use `generate_disposable_test_wallet` MCP tool
+
+- NEVER read PRIVATE_KEY
+- NEVER use `generate_disposable_test_wallet`
 - ONLY read WALLET_ADDRESS from .env
-- `make wallet` is SAFE — it never outputs the private key

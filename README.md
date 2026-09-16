@@ -33,9 +33,9 @@ Built for **humans**. Perfect for **AI**.
 - **Subscription** (free) — connect MCP to Claude Code / Cursor / Codex and use your existing subscription.
 - **AI SDK** (developers) — programmatic agents via the Vercel AI SDK with Claude or OpenAI.
 
-**Arc-native.** Beyond plain EVM transfers: delegate USDC to validators (`prepare_delegate`), undelegate, deploy and verify Solidity contracts on-chain, and explore the full chain (blocks, txs, accounts, contracts, tokens, validators).
+**Arc-native.** Explore blocks, accounts, tokens, validators, and verify contracts. Native transfers: MCP prepares an unsigned skeleton; you sign locally and broadcast via Arc RPC.
 
-> ⚠️ **Mainnet — real funds.** The default network is **Arc mainnet (chain ID 5042, native USDC)**. `/send`, `/deploy`, and any `prepare_delegate`/`prepare_undelegate` call move **real USDC**. There is **no faucet on mainnet** — fund your address from an exchange/bridge. Prefer **secure mode with manual approval** (`npm run signer -- --manual`) so every signature needs your `y/n`.
+> **Mainnet — real funds.** Default network is **Arc mainnet (chain ID 5042, native USDC)**. There is **no faucet**. Signing a filled transfer and broadcasting it spends **real USDC**. Prefer **secure mode with manual approval** (`npm run signer -- --manual`).
 
 ---
 
@@ -64,7 +64,7 @@ Built for **humans**. Perfect for **AI**.
 └──────────┴─────────────────┘
 ```
 
-**Key principle:** the private key NEVER leaves your machine. MCP prepares the unsigned tx → you sign locally → the signed hex is broadcast back through MCP.
+**Key principle:** the private key NEVER leaves your machine. Explorer MCP prepares an unsigned skeleton → you sign locally → broadcast via Arc RPC (`scripts/broadcast-tx.ts`). MCP does not broadcast.
 
 ---
 
@@ -258,20 +258,27 @@ docker compose up signer
 
 ## MCP Tools
 
-The Arc MCP server at `https://api.arc.exploreme.pro/mcp` exposes 88 tools; the categories this kit's flows use:
+Two servers (see `.mcp.json`):
 
-| Category | Tools |
+| Server | URL | Role |
+|---|---|---|
+| Explorer | `https://api.arc.exploreme.pro/mcp` | **18 tools.** Reads + unsigned native transfer. Does **not** sign or broadcast. |
+| Docs | `https://docs.arc.io/mcp` | Official Arc docs search / get page. Read-only. |
+
+| Category | Live explorer tools |
 |---|---|
-| **Transactions** (write) | `prepare_native_transfer`, `prepare_erc20_transfer`, `prepare_transaction`, `broadcast_signed_raw_transaction`, `wait_for_transaction` |
-| **Staking** (write) | `prepare_delegate`, `prepare_undelegate` |
-| **Staking** (read) | `list_validators`, `get_validator`, `validator_apr`, `validator_delegations`, `account_delegations` |
-| **Balances / accounts** | `rpc_native_balance`, `rpc_token_balance`, `balance_at_block`, `get_account` |
-| **Blocks / txs** | `list_blocks`, `get_block`, `list_block_transactions`, `list_transactions`, `get_transaction` |
-| **Contracts** | `rpc_read_contract`, `verify_contract_std_json`, `verify_contract_multi_part`, `verifier_compiler_versions`, `get_contract` |
-| **Tokens** | `list_tokens`, `get_token`, `list_token_holders`, `list_account_tokens` |
-| **Explorer / search** | `search`, `list_top_accounts`, `list_top_contracts` |
+| Chain | `stats_overview`, `indexer_info`, `gas_oracle` |
+| Blocks / txs | `list_blocks`, `get_block`, `get_transaction` |
+| Accounts | `get_account`, `account_delegations` |
+| Tokens | `list_tokens` |
+| Search | `search` |
+| Validators | `list_validators`, `get_validator` |
+| Contracts | `get_evm_compiler_versions`, `verify_evm_contract_standard_json`, `verify_evm_contract_multi_part`, `get_evm_contract_abi` |
+| Unsigned tx | `prepare_native_transfer` (`to` + `value` wei), `prepare_staking_tx` |
 
-> There is no faucet on Arc mainnet — `claim_faucet_tokens` still exists but returns a no-op explainer for mainnet addresses. Some tool descriptions returned by the server say "0G" or reference `ZEROG_FAUCET_URL` — leftover text from a shared MCP implementation; the underlying chain data is genuinely Arc/USDC (verified against `chain_network` and the mainnet RPC directly).
+`prepare_native_transfer` does not take `from`/`amount`. Broadcast with `npx tsx scripts/broadcast-tx.ts` after local signing.
+
+> `list_validators` schema text may still mention 0G. Ignore it. There is no faucet tool on this server.
 
 ---
 

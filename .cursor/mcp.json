@@ -1,7 +1,10 @@
 {
   "mcpServers": {
-    "arc": {
+    "arc-explorer": {
       "url": "https://api.arc.exploreme.pro/mcp"
+    },
+    "arc-docs": {
+      "url": "https://docs.arc.io/mcp"
     }
   }
 }

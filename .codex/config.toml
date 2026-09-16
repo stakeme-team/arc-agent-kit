@@ -1,3 +1,7 @@
-[mcp_servers.arc]
+[mcp_servers.arc-explorer]
 command = "npx"
 args = ["mcp-remote", "https://api.arc.exploreme.pro/mcp"]
+
+[mcp_servers.arc-docs]
+command = "npx"
+args = ["mcp-remote", "https://docs.arc.io/mcp"]

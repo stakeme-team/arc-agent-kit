@@ -1,21 +1,11 @@
-// Using 'any' for tool types since MCP tools use inputSchema (not parameters)
 import { signTransaction, getAddress } from "./wallet.js";
+import { broadcastRaw, completeUnsignedTx } from "./rpc.js";
 
-// Tools that return unsigned transactions needing signing
-const PREPARE_TOOLS = [
-  "prepare_native_transfer",
-  "prepare_transaction",
-  "prepare_erc20_transfer",
-  "prepare_delegate",
-  "prepare_undelegate",
-];
+const PREPARE_TOOLS = ["prepare_native_transfer"];
 
 /**
- * MCP tool results come wrapped in the standard envelope:
- * { content: [{ type: "text", text: "... summary ...\n\n{...tx json...}" }],
- *   structuredContent: { data: {...tx fields...}, summary, ui_url }, isError }
- * The actual unsigned-tx fields live at structuredContent.data — not at the
- * top level of the result — so that's what needs signing, not the envelope.
+ * MCP tool results come wrapped in the standard envelope.
+ * Unsigned-tx fields live at structuredContent.data.
  */
 function extractUnsignedTx(result: unknown): Record<string, unknown> | null {
   if (result && typeof result === "object") {
@@ -29,7 +19,7 @@ function extractUnsignedTx(result: unknown): Record<string, unknown> | null {
   }
   if (typeof result === "string") {
     try {
-      return JSON.parse(result);
+      return JSON.parse(result) as Record<string, unknown>;
     } catch {
       return null;
     }
@@ -37,76 +27,77 @@ function extractUnsignedTx(result: unknown): Record<string, unknown> | null {
   return null;
 }
 
+type McpTool = {
+  execute?: (args: unknown, options: unknown) => Promise<unknown>;
+  [key: string]: unknown;
+};
+
 /**
- * Wraps MCP tools with signing bridge.
- * When agent calls prepare_*, the bridge:
- * 1. Calls the real MCP tool to get unsigned tx
- * 2. Signs it locally (or via daemon)
- * 3. Returns both unsigned tx AND serializedTransaction to the agent
- *
- * The agent (LLM) NEVER sees the private key. The field name
- * `serializedTransaction` matches broadcast_signed_raw_transaction's
- * input arg exactly so the LLM can pass it through without renaming.
+ * When the agent calls prepare_native_transfer:
+ * 1. MCP returns an unsigned skeleton (to + value wei). It does not sign or broadcast.
+ * 2. Fill nonce/gas from Arc RPC, sign locally.
+ * 3. Return serializedTransaction. Broadcast with the local broadcast_signed_raw tool.
  */
 export function augmentToolsWithSigning(
-  tools: Record<string, any>
-): Record<string, any> {
+  tools: Record<string, McpTool>,
+): Record<string, McpTool> {
   const augmented = { ...tools };
 
   for (const toolName of PREPARE_TOOLS) {
-    if (augmented[toolName]) {
-      const original = augmented[toolName] as any;
-      const originalExecute = original.execute;
-
-      if (!originalExecute) continue;
-
-      augmented[toolName] = {
-        ...original,
-        execute: async (args: any, options: any) => {
-          // Call original MCP tool
-          const result = await originalExecute(args, options);
-
-          // Extract the unsigned tx fields from the MCP result envelope
-          const unsigned = extractUnsignedTx(result);
-          if (!unsigned) {
-            // Tool errored or returned something we can't parse — pass through as-is
-            return result;
-          }
-
-          // Sign the transaction
-          try {
-            const serializedTransaction = await signTransaction(unsigned);
-            // Return enriched result — agent sees unsigned + signed
-            const enriched = {
-              ...unsigned,
-              serializedTransaction,
-              _note:
-                "Transaction signed locally. Pass `serializedTransaction` as the argument of the same name to broadcast_signed_raw_transaction.",
-            };
-            return JSON.stringify(enriched);
-          } catch (e: any) {
-            // If signing fails, return original + error
-            return JSON.stringify({
-              ...unsigned,
-              _signingError: e.message,
-              _note:
-                "Signing failed. Check wallet setup: npm run wallet:simple",
-            });
-          }
-        },
-      };
-    }
+    const original = augmented[toolName];
+    if (!original?.execute) continue;
+    const originalExecute = original.execute;
+    augmented[toolName] = {
+      ...original,
+      execute: async (args: unknown, options: unknown) => {
+        const result = await originalExecute(args, options);
+        const unsigned = extractUnsignedTx(result);
+        if (!unsigned) return result;
+        try {
+          const from = getAddress() as `0x${string}`;
+          const filled = await completeUnsignedTx(unsigned, from);
+          const serializedTransaction = await signTransaction(filled);
+          return JSON.stringify({
+            ...filled,
+            serializedTransaction,
+            _note:
+              "Signed locally. The explorer MCP cannot broadcast. Call broadcast_signed_raw with serializedTransaction.",
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return JSON.stringify({
+            ...unsigned,
+            _signingError: message,
+            _note: "Signing failed. Check wallet setup: npm run wallet:simple",
+          });
+        }
+      },
+    };
   }
 
-  // Add a helper tool so the agent can get the wallet address
-  // (inputSchema, not parameters — matches the shape real MCP tools use in this SDK version)
-  augmented["get_wallet_address"] = {
+  augmented.get_wallet_address = {
     description: "Get the local wallet address (no private key exposure)",
     inputSchema: { type: "object" as const, properties: {} },
-    execute: async () => {
-      return JSON.stringify({ address: getAddress() });
+    execute: async () => JSON.stringify({ address: getAddress() }),
+  };
+
+  augmented.broadcast_signed_raw = {
+    description:
+      "Broadcast a locally signed raw transaction to Arc RPC. Moves real USDC on mainnet.",
+    inputSchema: {
+      type: "object" as const,
+      properties: { serializedTransaction: { type: "string" } },
+      required: ["serializedTransaction"],
     },
-  } as any;
+    execute: async (args: unknown) => {
+      const serialized =
+        args && typeof args === "object" && "serializedTransaction" in args
+          ? String((args as { serializedTransaction: unknown }).serializedTransaction)
+          : "";
+      const hash = await broadcastRaw(serialized as `0x${string}`);
+      return JSON.stringify({ hash, explorer: `https://arc.exploreme.pro/tx/${hash}` });
+    },
+  };
 
   return augmented;
 }

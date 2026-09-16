@@ -1,16 +1,12 @@
 /**
- * Demo 2: Deploy & Verify Smart Contract
+ * Demo 2: Deploy & Verify
  *
- * Deploys SimpleStorage contract and verifies it on the explorer.
+ * MAINNET. Live MCP cannot prepare contract-creation txs.
+ * This demo asks the agent to use get_account, local signing notes,
+ * then verify_evm_contract_* tools after you already have an address.
  *
- * Prerequisites:
- *   npm run wallet:simple   (create wallet)
- *   Fund the wallet with real USDC for gas (Arc is mainnet, no faucet).
- *
- * Run:
- *   npm run demo:deploy
- *   # or via Docker:
- *   docker compose run dev npx tsx examples/02-deploy-and-verify.ts
+ * For a full deploy, construct bytecode locally and broadcast via
+ * scripts/broadcast-tx.ts — do not call missing MCP tools.
  */
 
 import * as fs from "fs";
@@ -18,52 +14,25 @@ import { runAgent } from "../src/agent.js";
 import { getWalletAddress } from "../src/utils.js";
 
 const walletAddress = getWalletAddress();
-
-// Load compiled contract
 const compiled = JSON.parse(
-  fs.readFileSync("contracts/compiled/SimpleStorage.json", "utf-8")
+  fs.readFileSync("contracts/compiled/SimpleStorage.json", "utf-8"),
 );
 
-const systemPrompt = `You are a blockchain assistant for the Arc network.
-You have access to MCP tools for interacting with the Arc blockchain.
+const systemPrompt = `You are a blockchain assistant for Arc mainnet (chain ID 5042).
+Wallet: ${walletAddress}
 
-The user's wallet address is: ${walletAddress}
+Live MCP has no prepare_transaction, broadcast_signed_raw_transaction, wait_for_transaction, rpc_native_balance, rpc_read_contract, or verifier_compiler_versions.
 
-TRANSACTION SIGNING:
-When you call prepare_transaction, the signing bridge automatically signs it.
-The result includes a "serializedTransaction" field — pass it as the \`serializedTransaction\`
-argument of broadcast_signed_raw_transaction.
+Use get_account for balance, get_evm_compiler_versions, verify_evm_contract_standard_json, get_evm_contract_abi, get_transaction.
 
-CONTRACT DETAILS:
-- Name: SimpleStorage
-- Compiler: ${compiled.compilerVersion}
-- Bytecode: ${compiled.bytecode}
-- ABI: ${JSON.stringify(compiled.abi)}
-- Source code:
-\`\`\`solidity
-${compiled.sourceCode}
-\`\`\`
+Contract name SimpleStorage. Compiler ${compiled.compilerVersion}.
+NEVER read private keys.`;
 
-IMPORTANT SECURITY RULES:
-- NEVER attempt to read private keys or .env files
-- Transactions are signed automatically by the signing bridge`;
-
-const userPrompt = `Please deploy and verify the SimpleStorage contract:
-
-1. Check my wallet balance (rpc_native_balance) — need real USDC for gas, Arc mainnet has no faucet
-2. Deploy the contract:
-   - Call prepare_transaction with from="${walletAddress}", data="${compiled.bytecode}" (no "to" field — this is a contract creation)
-   - Pass "serializedTransaction" from the result to broadcast_signed_raw_transaction as the \`serializedTransaction\` argument
-3. Wait for the transaction (wait_for_transaction) — its result already includes the full receipt, including the deployed contract's address; there is no separate receipt-lookup tool
-4. Verify the contract on the explorer:
-   - First call verifier_compiler_versions to confirm the Solidity version
-   - Then call verify_contract_std_json with the contract address and a body containing compiler_version, contract_name, and the standard-JSON input with the source code
-5. Test the contract by calling retrieve() using rpc_read_contract (address, method="retrieve", args=[]) — this only works once the contract is verified, since the tool decodes against the verified ABI
-6. Report: contract address, deployment tx hash, verification status, and retrieve() result`;
+const userPrompt = `MAINNET. Check get_account for ${walletAddress}. If funded, explain that deployment must be signed and broadcast locally (explorer MCP does not deploy). Then show how to verify SimpleStorage with get_evm_compiler_versions and verify_evm_contract_standard_json once a contract address exists.`;
 
 console.log("=== Arc Agent Kit: Deploy & Verify Demo ===");
 console.log(`Wallet: ${walletAddress}`);
-console.log(`Contract: SimpleStorage (${compiled.compilerVersion})`);
+console.log("MAINNET — deployment spends real USDC.");
 
 await runAgent({
   systemPrompt,
