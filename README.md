@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="Arc Agent Kit" width="96">
+<img src="assets/logo.png" alt="Arc Agent Kit" width="128">
 
 # Arc Agent Kit
 
